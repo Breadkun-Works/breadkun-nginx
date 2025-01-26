@@ -1,0 +1,82 @@
+# Nginx 실행 시점에 환경변수 등이 주입되어 default.conf.template -> default.conf 생성
+
+# HTTP 요청을 HTTPS로 리디렉션
+server {
+    listen 80;
+    server_name ${NGINX_SERVER_NAME};
+
+    return 301 https://$host$request_uri;
+}
+
+# 허용된 Origin 매핑
+# $http_origin 값이 아래 key와 일치하면, $cors_origin에 해당 값을 할당
+# 그 외에는 빈 값
+map $http_origin $cors_origin {
+    default "";
+    ${CORS_ORIGIN_1} "${CORS_ORIGIN_1}";
+    ${CORS_ORIGIN_2} "${CORS_ORIGIN_2}";
+    ${CORS_ORIGIN_3} "${CORS_ORIGIN_3}";
+}
+
+# HTTPS 요청 처리
+server {
+    listen 443 ssl;
+    server_name ${NGINX_SERVER_NAME};
+
+    # SSL 인증서 경로; Let’s Encrypt 기본 경로
+    # VM(host 시스템; 컨테이너 밖) 존재하는 경로, docker-compose에서 읽기 전용으로 마운트 설정
+    ssl_certificate /etc/letsencrypt/live/${NGINX_SERVER_NAME}/fullchain.pem; # 공개 인증서
+    ssl_certificate_key /etc/letsencrypt/live/${NGINX_SERVER_NAME}/privkey.pem; # 개인 키
+
+    # 세션 최적화; 부하 최소화
+    ssl_session_cache shared:SSL:10m; # 10MB 세션 캐시
+    ssl_session_timeout 10m; # 10분 동안 세션 유지
+    ssl_session_tickets on; # 세션 티켓 활성화
+
+    # SSL 보안 설정
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    location / {
+        # 1) 프리플라이트 요청(OPTIONS) 처리
+        if ($request_method = OPTIONS) {
+            # 허용되지 않은 Origin이면 403
+            if ($cors_origin = "") {
+                return 403;
+            }
+
+            add_header Access-Control-Allow-Origin $cors_origin always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-User-UUID, X-User-Name" always;
+            add_header Access-Control-Max-Age 86400 always;
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+            return 204;
+        }
+
+        # 2) 허용되지 않은 Origin이면 차단
+        if ($cors_origin = "") {
+            return 403;
+        }
+
+        # 3) CORS 헤더 추가
+        # 요청 Origin 값 그대로 반환
+        add_header Access-Control-Allow-Origin $cors_origin always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-User-UUID, X-User-Name" always;
+
+        # 4) docker-compose.yaml에서 정의된 백엔드 프록시
+        proxy_pass http://ciabatta-core:${CIABATTA_CORE_PORT};
+
+        # 클라이언트 -> 백엔드로 전달할 헤더
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-User-UUID $http_x_user_uuid;
+        proxy_set_header X-User-Name $http_x_user_name;
+    }
+
+    # 로그 설정
+    error_log /var/log/nginx/error.log;
+    access_log /var/log/nginx/access.log;
+}
