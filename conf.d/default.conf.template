@@ -10,6 +10,12 @@ map $http_origin $cors_origin {
     ${CORS_ORIGIN_3} "${CORS_ORIGIN_3}";
 }
 
+# Origin 허용 여부를 나타내는 플래그 설정
+map $cors_origin $is_valid_origin {
+    "" 0; # 빈 값이면 유효하지 않음
+    default 1; # 값이 있으면 유효
+}
+
 # HTTP 요청을 HTTPS로 리디렉션
 server {
     listen 80;
@@ -38,24 +44,26 @@ server {
     ssl_prefer_server_ciphers on;
 
     location / {
-        # 1) 프리플라이트 요청(OPTIONS) 처리
+        # 프리플라이트 요청(OPTIONS) 처리
         if ($request_method = OPTIONS) {
-            # 허용되지 않은 Origin이면 403
-            if ($cors_origin = "") {
-                return 403;
-            }
-
+            # 허용된 Origin만 처리
             add_header Access-Control-Allow-Origin $cors_origin always;
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
             add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-User-UUID, X-User-Name" always;
             add_header Access-Control-Max-Age 86400 always;
             add_header Content-Length 0;
             add_header Content-Type text/plain;
-            return 204;
+
+            return 204; # No Content
         }
 
-        # 2) 허용되지 않은 Origin이면 차단
-        if ($cors_origin = "") {
+        # 허용되지 않은 Origin 처리
+        # $is_valid_origin 값이 0이면 403 반환
+        error_page 403 = @forbidden_origin;
+        satisfy any;
+        allow all;
+        deny all;
+        if ($is_valid_origin = 0) {
             return 403;
         }
 
@@ -74,6 +82,11 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-User-UUID $http_x_user_uuid;
         proxy_set_header X-User-Name $http_x_user_name;
+    }
+
+    # 허용되지 않은 Origin 요청 처리
+    location @forbidden_origin {
+        return 403;
     }
 
     # 로그 설정
