@@ -1,13 +1,5 @@
 # Nginx 실행 시점에 환경변수 등이 주입되어 default.conf.template -> default.conf 생성
 
-# HTTP 요청을 HTTPS로 리디렉션
-server {
-    listen 80;
-    server_name ${NGINX_SERVER_NAME};
-
-    return 301 https://$host$request_uri;
-}
-
 # 허용된 Origin 매핑
 # $http_origin 값이 아래 key와 일치하면, $cors_origin에 해당 값을 할당
 # 그 외에는 빈 값
@@ -16,6 +8,14 @@ map $http_origin $cors_origin {
     ${CORS_ORIGIN_1} "${CORS_ORIGIN_1}";
     ${CORS_ORIGIN_2} "${CORS_ORIGIN_2}";
     ${CORS_ORIGIN_3} "${CORS_ORIGIN_3}";
+}
+
+# HTTP 요청을 HTTPS로 리디렉션
+server {
+    listen 80;
+    server_name ${NGINX_SERVER_NAME};
+
+    return 301 https://$host$request_uri;
 }
 
 # HTTPS 요청 처리
