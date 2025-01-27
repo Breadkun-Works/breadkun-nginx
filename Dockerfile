@@ -8,11 +8,4 @@ COPY conf.d/default.conf.template /etc/nginx/templates/default.conf.template
 ENV TZ Asia/Seoul
 
 # 컨테이너 실행 시 환경변수 대체 및 Nginx 실행
-ENTRYPOINT ["sh", "-c", "
-  sed 's|${NGINX_SERVER_NAME}|'$NGINX_SERVER_NAME'|g; \
-      s|${CORS_ORIGIN_1}|'$CORS_ORIGIN_1'|g; \
-      s|${CORS_ORIGIN_2}|'$CORS_ORIGIN_2'|g; \
-      s|${CORS_ORIGIN_3}|'$CORS_ORIGIN_3'|g; \
-      s|${CIABATTA_CORE_PORT}|'$CIABATTA_CORE_PORT'|g' \
-  /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'
-"]
+ENTRYPOINT ["sh", "-c", "sed 's|${NGINX_SERVER_NAME}|'$NGINX_SERVER_NAME'|g; s|${CORS_ORIGIN_1}|'$CORS_ORIGIN_1'|g; s|${CORS_ORIGIN_2}|'$CORS_ORIGIN_2'|g; s|${CORS_ORIGIN_3}|'$CORS_ORIGIN_3'|g; s|${CIABATTA_CORE_PORT}|'$CIABATTA_CORE_PORT'|g' /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
