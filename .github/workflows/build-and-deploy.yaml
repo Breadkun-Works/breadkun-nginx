@@ -32,7 +32,7 @@ jobs:
           SCRIPT_BEFORE: |
             docker stop breadkun-nginx-container || true
             docker rm breadkun-nginx-container || true
-            docker rmi breadkun-nginx || true
+            docker rmi breadkun-nginx:master || true
             rm -f /home/${{ secrets.MASTER_SSH_USERNAME }}/deploy/breadkun-nginx-master.tar
           SCRIPT_AFTER: |
             docker load -i /home/${{ secrets.MASTER_SSH_USERNAME }}/deploy/breadkun-nginx-master.tar
