@@ -4,7 +4,7 @@
 # $http_origin 값이 아래 key와 일치하면, $cors_origin에 해당 값을 할당
 # 그 외에는 빈 값
 map $http_origin $cors_origin {
-    default "*"; # 일시적으로 모든 경로 허용
+    default "";
     ${CORS_ORIGIN_1} "${CORS_ORIGIN_1}";
     ${CORS_ORIGIN_2} "${CORS_ORIGIN_2}";
     ${CORS_ORIGIN_3} "${CORS_ORIGIN_3}";
