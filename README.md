@@ -59,3 +59,12 @@ volumes:
 - `docker compose up -d`를 실행하여 컨테이너를 마운트합니다.
 - **`default.conf.template`의 환경 변수는 컨테이너 마운트 시 `docker-compose`에서 주입됩니다.**
 
+---
+
+## Maintainer
+
+- **HONG**
+    - **Role**: Initial Developer & Current Maintainer
+    - **GitHub**: [coldair426](https://github.com/coldair426)
+    - **Blog**: [Velog](https://velog.io/@coldair426)
+    - **Mail**: coldair426@gmail.com
