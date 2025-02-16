@@ -8,6 +8,7 @@ map $http_origin $cors_origin {
     ${CORS_ORIGIN_1} "${CORS_ORIGIN_1}";
     ${CORS_ORIGIN_2} "${CORS_ORIGIN_2}";
     ${CORS_ORIGIN_3} "${CORS_ORIGIN_3}";
+    ${CORS_ORIGIN_4} "${CORS_ORIGIN_4}";
 }
 
 # Origin 허용 여부를 나타내는 플래그 설정
