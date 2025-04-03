@@ -44,7 +44,9 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
 
-    location / {
+    # ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    # "/api/*" : REST API 요청 처리 location block
+    location /api/ {
         # 프리플라이트 요청(OPTIONS) 처리
         if ($request_method = OPTIONS) {
             # 허용된 Origin만 처리
@@ -68,13 +70,62 @@ server {
             return 403;
         }
 
-        # 3) CORS 헤더 추가
+        # CORS 헤더 추가
         # 요청 Origin 값 그대로 반환
         add_header Access-Control-Allow-Origin $cors_origin always;
         add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
         add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-User-UUID, X-User-Name" always;
 
-        # 4) docker-compose.yaml에서 정의된 백엔드 프록시
+        # docker-compose.yaml에서 정의된 백엔드 프록시
+        proxy_pass http://ciabatta-core:${CIABATTA_CORE_PORT};
+
+        # 클라이언트 -> 백엔드로 전달할 헤더
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-User-UUID $http_x_user_uuid;
+        proxy_set_header X-User-Name $http_x_user_name;
+    }
+
+    # ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    # "/sse/*" : SSE 요청 처리 location block
+    location /sse/ {
+        # 프리플라이트 요청(OPTIONS) 처리
+        if ($request_method = OPTIONS) {
+            # 허용된 Origin만 처리
+            add_header Access-Control-Allow-Origin $cors_origin always;
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+            add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-User-UUID, X-User-Name" always;
+            add_header Access-Control-Max-Age 86400 always;
+            add_header Content-Length 0;
+            add_header Content-Type text/plain;
+
+            return 204; # No Content
+        }
+
+        # 허용되지 않은 Origin 처리
+        # $is_valid_origin 값이 0이면 403 반환
+        error_page 403 = @forbidden_origin;
+        satisfy any;
+        allow all;
+        deny all;
+        if ($is_valid_origin = 0) {
+            return 403;
+        }
+
+        # CORS 헤더 추가
+        # 요청 Origin 값 그대로 반환
+        add_header Access-Control-Allow-Origin $cors_origin always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Content-Type, Authorization, X-User-UUID, X-User-Name" always;
+
+        # SSE 특화 설정
+        proxy_buffering off; # 버퍼링 비활성화
+        proxy_set_header Connection keep-alive; # 지속 연결 유지
+        proxy_set_header Accept text/event-stream; # SSE 요청 헤더
+        proxy_read_timeout 7200s; # 2시간(장바구니 유효시간) 연결 허용; 상세 설정은 FE/BE에서 처리
+
+        # docker-compose.yaml에서 정의된 백엔드 프록시
         proxy_pass http://ciabatta-core:${CIABATTA_CORE_PORT};
 
         # 클라이언트 -> 백엔드로 전달할 헤더
